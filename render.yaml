@@ -1,0 +1,27 @@
+# Render Blueprint — free web service. Import this repo/folder to Render,
+# or create a Web Service manually with start command `node server.js`.
+# No number is attached by default. Add WhatsApp env vars ONLY at the last
+# moment before operations (see DEPLOY_AND_INSTALL_LATER.md).
+services:
+  - type: web
+    name: bhivanta-whatsapp-employee
+    env: node
+    plan: free
+    buildCommand: "echo 'no build needed'"
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
