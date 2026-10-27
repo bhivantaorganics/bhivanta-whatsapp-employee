@@ -1,0 +1,1 @@
+{"description":"Bhivanta Organics AI WhatsApp Employee — Phase 1 + Phase 2 webhook, no number attached by default","engines":{"node":">=24"},"license":"UNLICENSED","main":"server.js","name":"bhivanta-whatsapp-employee","scripts":{"start":"node server.js","test":"node --test tests/engine.test.js"},"version":"1.0.0"}
