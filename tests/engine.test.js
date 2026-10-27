@@ -21,6 +21,14 @@ test('duplicate webhook message is ignored', () => {
 test('lead scoring: price+address is hot, greeting is cold', () => {
   assert.equal(scoreLead(999001, ['price kya hai aur mera address Delhi 110001 hai']), 'hot');
 });
+test('dummy WhatsApp values do NOT flip mode to cloud_api', () => {
+  const { isRealWhatsappConfig, isPlaceholderValue, db } = require('../server.js');
+  assert.equal(isPlaceholderValue('dummy_phone_number_id'), true);
+  assert.equal(isPlaceholderValue(''), true);
+  // env in this test process has no real WhatsApp config, so seeded mode must be simulator
+  const mode = db.prepare('SELECT value FROM settings WHERE key=?').get('whatsapp_mode').value;
+  assert.equal(mode, 'simulator');
+});
 test('order enquiry starts as New Enquiry, never Confirmed', () => {
   processInbound({ phone: '919999999992', body: 'mujhe order karna hai, address Delhi 110001', whatsappId: 'wamid-test-2' });
   const { db } = require('../server.js');
