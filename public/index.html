@@ -3,7 +3,14 @@
 <body>
 <header class="top"><div><b>🌱 Bhivanta Organics</b><span>AI WhatsApp Employee</span></div><button id="logoutBtn" class="ghost">Logout</button></header>
 <div id="login" class="card loginCard"><h2>Owner Login</h2><p>Local demo login: <b>owner / admin123</b> — deployment se pehle <code>ADMIN_PASSWORD</code> zaroor badlein.</p>
-<input id="lu" placeholder="Username" value="owner"><input id="lp" type="password" placeholder="Password" value="admin123"><button id="loginBtn">Login</button><p id="loginErr" class="err"></p></div>
+<input id="lu" placeholder="Username" value="owner"><input id="lp" type="password" placeholder="Password" value="admin123"><button id="loginBtn">Login</button><p id="loginErr" class="err"></p>
+<p style="margin-top:8px"><a href="#" id="forgotLink">Forgot password?</a></p>
+<div id="forgotBox" class="hidden" style="margin-top:10px;border-top:1px solid #ddd;padding-top:10px">
+<p><b>Password bhool gaye?</b> Koi bhi aadmi is page se password reset nahi kar sakta — warna koi bhi tumhara account le leta. Do safe tareeke hain, password chat me kabhi mat bhejo:</p>
+<p><b>1) SnapDeploy se (hamesha kaam karta hai):</b> SnapDeploy kholo → Containers → bhivanta-whatsapp-employee-03bfd → Settings / Environment Variables → <code>ADMIN_PASSWORD</code> apne naye password se badlo → container restart karo → phir yahan Username <code>owner</code> + naya password se login karo.</p>
+<p><b>2) Yahan se one-click reset (sirf tab jab tumne pehle se host me reset key set ki ho):</b> SnapDeploy env me <code>OWNER_RESET_KEY</code> set karo (ek strong secret, sirf tumhe pata ho), restart karo, phir neeche wo key + naya password dalo:</p>
+<input id="frKey" type="password" placeholder="Reset key (OWNER_RESET_KEY)"><input id="frPass" type="password" placeholder="New password (kam se kam 8 characters)"><input id="frPass2" type="password" placeholder="New password dobara"><button id="forgotBtn">Reset password</button><p id="forgotMsg"></p>
+</div></div>
 <main id="app" class="hidden">
 <nav class="tabs" id="tabs"></nav>
 <section id="page"></section>
