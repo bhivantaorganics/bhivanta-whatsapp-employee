@@ -29,6 +29,20 @@ test('dummy WhatsApp values do NOT flip mode to cloud_api', () => {
   const mode = db.prepare('SELECT value FROM settings WHERE key=?').get('whatsapp_mode').value;
   assert.equal(mode, 'simulator');
 });
+test('forgot reset: no key = refused, wrong key = refused, correct key + 8+ chars = reset', () => {
+  const { forgotReset, db } = require('../server.js');
+  const crypto = require('node:crypto');
+  delete process.env.OWNER_RESET_KEY;
+  assert.equal(forgotReset('anything', 'newpassword123').ok, false);
+  process.env.OWNER_RESET_KEY = 'test-reset-key-123';
+  assert.equal(forgotReset('wrong-key', 'newpassword123').ok, false);
+  assert.equal(forgotReset('test-reset-key-123', 'short').ok, false);
+  assert.equal(forgotReset('test-reset-key-123', 'newpassword123').ok, true);
+  const owner = db.prepare('SELECT * FROM users WHERE username=?').get('owner');
+  const hashPass = (p, s) => crypto.scryptSync(p, s, 64).toString('hex');
+  assert.equal(hashPass('newpassword123', owner.pass_salt), owner.pass_hash);
+  delete process.env.OWNER_RESET_KEY;
+});
 test('order enquiry starts as New Enquiry, never Confirmed', () => {
   processInbound({ phone: '919999999992', body: 'mujhe order karna hai, address Delhi 110001', whatsappId: 'wamid-test-2' });
   const { db } = require('../server.js');
