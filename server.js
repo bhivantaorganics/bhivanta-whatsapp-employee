@@ -247,6 +247,31 @@ async function sendViaCloud(to, body) {
   return j;
 }
 
+// ---------- Forgot password (secure, owner-controlled) ----------
+// SECURITY: There is NO email/OTP reset and NO unauthenticated reset here,
+// because this public link has no verified owner email and anyone could
+// otherwise hijack the owner account. Two owner-controlled paths only:
+//  1) Recommended, always works: change ADMIN_PASSWORD in the host dashboard
+//     (SnapDeploy: Containers -> service -> Settings/Environment Variables)
+//     and restart. The startup sync in this file then makes the new password
+//     the login password. No code change, no chat message needed.
+//  2) Optional one-click reset on the login page: only if the owner has set
+//     OWNER_RESET_KEY in the host env (never in code, never in chat). The
+//     forgot form must supply that exact key plus a new password (>=8 chars).
+//     If OWNER_RESET_KEY is not set, the endpoint refuses and points to path 1.
+function forgotReset(resetKey, newPassword) {
+  if (!process.env.OWNER_RESET_KEY) return { ok: false, error: 'Reset key not set on host. Use the SnapDeploy ADMIN_PASSWORD steps shown below the login form, then restart.' };
+  if (!resetKey || resetKey !== process.env.OWNER_RESET_KEY) return { ok: false, error: 'Invalid reset key' };
+  if (!newPassword || newPassword.length < 8) return { ok: false, error: 'New password must be at least 8 characters' };
+  const owner = db.prepare('SELECT * FROM users WHERE username=?').get('owner');
+  if (!owner) return { ok: false, error: 'Owner account not found' };
+  const salt = crypto.randomBytes(16).toString('hex');
+  db.prepare('UPDATE users SET pass_hash=?, pass_salt=? WHERE id=?').run(hashPass(newPassword, salt), salt, owner.id);
+  db.prepare('DELETE FROM sessions WHERE user_id=?').run(owner.id);
+  audit('password_reset_via_reset_key', 'owner password reset with host reset key; all sessions invalidated');
+  return { ok: true };
+}
+
 // ---------- HTTP server ----------
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
@@ -260,6 +285,12 @@ const server = http.createServer(async (req, res) => {
       const token = crypto.randomBytes(32).toString('hex');
       db.prepare('INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)').run(token, u.id, now());
       audit('login', u.username); return sendJson(res, 200, { token, username: u.username, role: u.role });
+    }
+    if (p === '/api/auth/forgot-password' && req.method === 'POST') {
+      const b = await readBody(req);
+      const r = forgotReset(b.resetKey || '', b.newPassword || '');
+      if (!r.ok) return sendJson(res, r.error === 'Invalid reset key' ? 401 : 400, { error: r.error });
+      return sendJson(res, 200, { ok: true });
     }
     // WhatsApp webhook (public, signature-verified when secret is set)
     if (p === '/webhook/whatsapp') {
@@ -396,4 +427,4 @@ const server = http.createServer(async (req, res) => {
   } catch (e) { console.error(e); sendJson(res, 500, { error: e.message }); }
 });
 if (require.main === module) server.listen(PORT, () => console.log(`Bhivanta WhatsApp Employee running on http://localhost:${PORT} — login: owner`));
-module.exports = { server, aiDraft, processInbound, scoreLead, db, isRealWhatsappConfig, isPlaceholderValue };
+module.exports = { server, aiDraft, processInbound, scoreLead, db, isRealWhatsappConfig, isPlaceholderValue, forgotReset };

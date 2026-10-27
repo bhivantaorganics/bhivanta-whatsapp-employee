@@ -42,6 +42,17 @@ docker build -t bhivanta-employee .
 docker run -p 3000:3000 -v bhivanta-data:/app/data -e ADMIN_PASSWORD=xxx bhivanta-employee
 ```
 
+## FORGOT PASSWORD (2026-10-27) — login ke neeche "Forgot password?" link
+Login card ke neeche hi Forgot password ka option hai. Koi bhi visitor is page
+se password reset nahi kar sakta (warna koi bhi owner account le leta) — do
+safe tareeke panel me likhe hain: (1) SnapDeploy me ADMIN_PASSWORD badlo +
+restart (hamesha kaam karta hai), (2) optional one-click reset sirf tab jab
+host env me OWNER_RESET_KEY set ho — forgot form me wo key + naya password
+(>=8 chars) dalne par password badalta hai aur purane sessions khatam ho
+jate hain. Agar OWNER_RESET_KEY set nahi hai, form refuse karta hai aur
+SnapDeploy wale tareeke ki taraf bhejta hai. Reset key kabhi code ya chat
+me mat dalo, sirf host env me.
+
 ## PATCH 2026-10-27 — mode + password now re-derived on every startup
 SnapDeploy required all env vars to be filled, so dummy WhatsApp values at
 first start locked the live app to `cloud_api` mode and the owner password
