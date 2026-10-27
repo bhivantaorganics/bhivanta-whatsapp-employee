@@ -42,6 +42,22 @@ docker build -t bhivanta-employee .
 docker run -p 3000:3000 -v bhivanta-data:/app/data -e ADMIN_PASSWORD=xxx bhivanta-employee
 ```
 
+## PATCH 2026-10-27 — mode + password now re-derived on every startup
+SnapDeploy required all env vars to be filled, so dummy WhatsApp values at
+first start locked the live app to `cloud_api` mode and the owner password
+hashed into data.db could not be changed by changing the env var alone.
+Fixed in server.js: on every startup, mode = `cloud_api` ONLY if the phone
+ID is all digits and the access token is present and neither looks like a
+placeholder (dummy/placeholder/not_set/test/example/xxxx, or very short)
+— otherwise `simulator`, even if dummy vars are present. And if
+ADMIN_PASSWORD env is set and does not match the stored owner hash, the
+stored hash is updated to it on startup. So "overwrite ADMIN_PASSWORD in
+the host dashboard + restart" now actually changes the login password.
+Verified locally 2026-10-27: dummy env → mode simulator, password change
+on restart works (new password logs in, old password gives 401), tests 7/7.
+To get this fix on SnapDeploy, upload the updated server.js +
+tests/engine.test.js to the GitHub repo and redeploy (1 deploy quota).
+
 ## Last-moment steps — when operations start (only these, in this order)
 1. On your host, set these env vars (in the host dashboard, NEVER in chat):
    `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_ACCESS_TOKEN`,

@@ -79,6 +79,30 @@ if (!getSetting('seeded')) {
   console.log('[seed] owner login: owner / ' + (process.env.ADMIN_PASSWORD ? '(from ADMIN_PASSWORD)' : 'admin123 — CHANGE THIS before any public deployment'));
 }
 
+// ---------- PATCH 2026-10-27: mode + admin password re-derived on EVERY startup ----------
+// Why: SnapDeploy required all env vars to be filled, so dummy WhatsApp values
+// present at first start locked mode to cloud_api, and the owner password hashed
+// into data.db at first start could not be changed by changing the env var alone.
+// Now: mode = cloud_api ONLY if the phone ID is all digits AND the access token
+// is present AND neither looks like a placeholder (dummy/placeholder/not_set/
+// test/example/xxxx, or very short). Otherwise simulator, even if dummy vars exist.
+// And if ADMIN_PASSWORD env is set and does not match the stored owner hash,
+// the stored hash is updated to it on startup (host env is the owner-controlled
+// source of truth for this pilot app; anyone who can set host env already
+// controls the deployment). This makes "overwrite ADMIN_PASSWORD in host env
+// + restart" actually work.
+function isPlaceholderValue(v) { return !v || /dummy|placeholder|not_set|not-set|example|xxxx|test_|changeme/i.test(v) || v.length < 8; }
+function isRealWhatsappConfig() { const id = process.env.WHATSAPP_PHONE_NUMBER_ID || ''; const tok = process.env.WHATSAPP_ACCESS_TOKEN || ''; return /^\d+$/.test(id) && tok.length >= 20 && !isPlaceholderValue(id) && !isPlaceholderValue(tok); }
+setSetting('whatsapp_mode', isRealWhatsappConfig() ? 'cloud_api' : 'simulator');
+if (process.env.ADMIN_PASSWORD) {
+  const owner = db.prepare('SELECT * FROM users WHERE username=?').get('owner');
+  if (owner && hashPass(process.env.ADMIN_PASSWORD, owner.pass_salt) !== owner.pass_hash) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    db.prepare('UPDATE users SET pass_hash=?, pass_salt=? WHERE id=?').run(hashPass(process.env.ADMIN_PASSWORD, salt), salt, owner.id);
+    audit('admin_password_synced_from_env', 'owner password updated from ADMIN_PASSWORD env on startup');
+  }
+}
+
 // ---------- Helpers ----------
 function sendJson(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); }
 function readBody(req) { return new Promise(r => { let b = ''; req.on('data', c => b += c); req.on('end', () => { try { r(JSON.parse(b || '{}')); } catch { r({}); } }); }); }
@@ -372,4 +396,4 @@ const server = http.createServer(async (req, res) => {
   } catch (e) { console.error(e); sendJson(res, 500, { error: e.message }); }
 });
 if (require.main === module) server.listen(PORT, () => console.log(`Bhivanta WhatsApp Employee running on http://localhost:${PORT} — login: owner`));
-module.exports = { server, aiDraft, processInbound, scoreLead, db };
+module.exports = { server, aiDraft, processInbound, scoreLead, db, isRealWhatsappConfig, isPlaceholderValue };
